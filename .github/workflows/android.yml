@@ -49,48 +49,16 @@ jobs:
             export/release/android/obj/
           key: cache-android-build
 
-      - name: Installing/Updating libraries
-        shell: bash
+            - name: Installing/Updating libraries
         run: |
-          set -e
-
-          echo "=== RESET HAXELIB ==="
-          rm -rf .haxelib
-          mkdir -p .haxelib
-          haxelib setup "$GITHUB_WORKSPACE/.haxelib"
-
+          haxe -cp commandline -D analyzer-optimize --run Main setup -s
           echo "=== HAXE ==="
           which haxe
           haxe --version
-          haxe --std-path
-
-          echo "=== SET CORRECT HAXE STD ==="
-          export HAXE_STD_PATH="$(haxe --std-path)"
-          echo "HAXE_STD_PATH=$HAXE_STD_PATH"
-
-          echo "=== SETUP MAIN LIBRARIES ==="
-          haxe -cp commandline -D analyzer-optimize --run Main setup -s
-
-          echo "=== INSTALL ANDROIDTOOLS ==="
-          haxelib git extension-androidtools https://github.com/MAJigsaw77/extension-androidtools.git
-
-          echo "=== LIBRARIES ==="
-          haxelib list
-
-          echo "=== ANDROIDTOOLS ==="
-          haxelib path extension-androidtools
-
           echo "=== HXCPP ==="
           haxelib path hxcpp
-
-      - name: Check hxcpp Compiler.hx
-        shell: bash
-        run: |
-          echo "=== FIND HXCPP Compiler.hx ==="
-          find .haxelib -type f -path "*/tools/hxcpp/Compiler.hx" -print 2>/dev/null || true
-
-          echo "=== FIND ALL Compiler.hx ==="
-          find .haxelib "$HAXE_STD_PATH" -type f -name "Compiler.hx" -print 2>/dev/null || true
+          echo "=== REBUILD HXCPP ==="
+          haxelib run lime rebuild hxcpp
 
       - name: Rebuild hxcpp
         shell: bash
