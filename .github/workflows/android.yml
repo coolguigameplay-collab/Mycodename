@@ -22,37 +22,20 @@ steps:
     with:
       ndk-version: r25c
 
-              - name: Installing/Updating libraries
-        shell: bash
+  - name: Installing/Updating libraries
         run: |
-          set -e
+          haxelib setup .haxelib
 
-          rm -rf .haxelib
-          mkdir -p .haxelib
-          haxelib setup "$GITHUB_WORKSPACE/.haxelib"
+          echo "=== SETUP MAIN LIBRARIES ==="
+          haxe -cp commandline -D analyzer-optimize --run Main setup -s
 
-          echo "=== HAXE ==="
-          haxe --version
-          export HAXE_STD_PATH="$(haxe --std-path)"
-          echo "HAXE_STD_PATH=$HAXE_STD_PATH"
-
-          echo "=== INSTALL ANDROIDTOOLS ==="
-          haxelib git extension-androidtools https://github.com/MAJigsaw77/extension-androidtools.git
-
-          echo "=== INSTALL HXCPP ==="
-          haxelib git hxcpp https://github.com/CodenameCrew/cne-hxcpp.git
-
-          echo "=== INSTALL REQUIRED LIBRARIES ==="
-          haxelib install flixel-ui 2.6.1
-          haxelib install hxvlc 1.9.3
-          haxelib install format
-          haxelib install markdown
-          haxelib install nape-haxe4
+          echo "=== REPLACE ANDROIDTOOLS GIT WITH STABLE RELEASE ==="
+          haxelib remove extension-androidtools || true
+          haxelib install extension-androidtools 2.2.2
 
           echo "=== VERIFY ==="
           haxelib list
           haxelib path extension-androidtools
-          haxelib path hxcpp
 
   - name: Rebuild hxcpp
     shell: bash
