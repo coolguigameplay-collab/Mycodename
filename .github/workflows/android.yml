@@ -17,6 +17,25 @@ steps:
     with:
       haxe-version: 4.2.5
 
+            - name: Find Haxe Compiler.hx
+        run: |
+          echo "=== HAXE ==="
+          haxe --version
+          which haxe
+
+          echo "=== HAXE STD ==="
+          echo "$HAXE_STD_PATH"
+
+          echo "=== ALL Compiler.hx ==="
+          find /opt/hostedtoolcache/haxe "$HAXE_STD_PATH" .haxelib \
+            -type f -name "Compiler.hx" -print 2>/dev/null || true
+
+          echo "=== HXCPP ==="
+          haxelib path hxcpp || true
+
+          echo "=== ANDROIDTOOLS ==="
+          haxelib path extension-androidtools || true
+
   - name: Setup Android NDK
     uses: nttld/setup-ndk@main
     with:
