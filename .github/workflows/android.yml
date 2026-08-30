@@ -17,59 +17,42 @@ steps:
     with:
       haxe-version: 4.2.5
 
-            - name: Find Haxe Compiler.hx
-        run: |
-          echo "=== HAXE ==="
-          haxe --version
-          which haxe
-
-          echo "=== HAXE STD ==="
-          echo "$HAXE_STD_PATH"
-
-          echo "=== ALL Compiler.hx ==="
-          find /opt/hostedtoolcache/haxe "$HAXE_STD_PATH" .haxelib \
-            -type f -name "Compiler.hx" -print 2>/dev/null || true
-
-          echo "=== HXCPP ==="
-          haxelib path hxcpp || true
-
-          echo "=== ANDROIDTOOLS ==="
-          haxelib path extension-androidtools || true
-
   - name: Setup Android NDK
     uses: nttld/setup-ndk@main
     with:
       ndk-version: r25c
 
-        - name: Installing/Updating libraries
-        continue-on-error: true
+              - name: Installing/Updating libraries
+        shell: bash
         run: |
-          haxelib setup .haxelib
-          haxe -cp commandline -D analyzer-optimize --run Main setup -s
+          set -e
 
-      - name: Diagnose Compiler.hx
-        run: |
+          rm -rf .haxelib
+          mkdir -p .haxelib
+          haxelib setup "$GITHUB_WORKSPACE/.haxelib"
+
           echo "=== HAXE ==="
           haxe --version
-          which haxe
+          export HAXE_STD_PATH="$(haxe --std-path)"
+          echo "HAXE_STD_PATH=$HAXE_STD_PATH"
 
-          echo "=== HAXE STD ==="
-          echo "$HAXE_STD_PATH"
+          echo "=== INSTALL ANDROIDTOOLS ==="
+          haxelib git extension-androidtools https://github.com/MAJigsaw77/extension-androidtools.git
 
-          echo "=== ALL Compiler.hx ==="
-          find . /opt/hostedtoolcache/haxe -type f -name "Compiler.hx" -print 2>/dev/null || true
+          echo "=== INSTALL HXCPP ==="
+          haxelib git hxcpp https://github.com/CodenameCrew/cne-hxcpp.git
 
-          echo "=== HXCPP ==="
-          haxelib path hxcpp || true
+          echo "=== INSTALL REQUIRED LIBRARIES ==="
+          haxelib install flixel-ui 2.6.1
+          haxelib install hxvlc 1.9.3
+          haxelib install format
+          haxelib install markdown
+          haxelib install nape-haxe4
 
-          echo "=== ANDROIDTOOLS ==="
-          haxelib path extension-androidtools || true
-
-          echo "=== SEARCH LINE 718 ==="
-          for f in $(find . /opt/hostedtoolcache/haxe -type f -name "Compiler.hx" 2>/dev/null); do
-            echo "===== $f ====="
-            sed -n '700,730p' "$f" || true
-          done
+          echo "=== VERIFY ==="
+          haxelib list
+          haxelib path extension-androidtools
+          haxelib path hxcpp
 
   - name: Rebuild hxcpp
     shell: bash
