@@ -33,24 +33,24 @@ jobs:
             export/release/android/obj/
           key: cache-android-build
 
-      - name: Installing/Updating libraries
+            - name: Installing/Updating libraries
         run: |
           haxelib setup .haxelib
+
+          echo "=== SETUP MAIN LIBRARIES ==="
           haxe -cp commandline -D analyzer-optimize --run Main setup -s
+
+          echo "=== INSTALL ANDROIDTOOLS ==="
+          haxelib git extension-androidtools https://github.com/MAJigsaw77/extension-androidtools.git
+
+          echo "=== VERIFY ==="
+          haxelib path extension-androidtools
+          haxelib path hxcpp
+          haxelib list
 
           echo "=== HAXE ==="
           which haxe
           haxe --version
-          echo "HAXE_STD_PATH=$HAXE_STD_PATH"
-
-          echo "=== HAXELIB ==="
-          haxelib list
-
-          echo "=== ANDROIDTOOLS ==="
-          haxelib path extension-androidtools
-
-          echo "=== FIND COMPILER.HX ==="
-          find "$HAXE_STD_PATH" .haxelib -type f -iname 'Compiler.hx' 2>/dev/null | sort
 
       - name: Rebuild hxcpp
         run: |
