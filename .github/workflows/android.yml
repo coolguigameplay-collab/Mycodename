@@ -22,20 +22,19 @@ steps:
     with:
       ndk-version: r25c
 
-  - name: Installing/Updating libraries
-        run: |
-          haxelib setup .haxelib
+  - name: Installing libraries
+  run: |
+    haxelib setup .haxelib
 
-          echo "=== SETUP MAIN LIBRARIES ==="
-          haxe -cp commandline -D analyzer-optimize --run Main setup -s
+    echo "=== INSTALL ANDROIDTOOLS STABLE ==="
+    haxelib install extension-androidtools 2.2.2
 
-          echo "=== REPLACE ANDROIDTOOLS GIT WITH STABLE RELEASE ==="
-          haxelib remove extension-androidtools || true
-          haxelib install extension-androidtools 2.2.2
+    echo "=== INSTALL MAIN LIBRARIES ==="
+    haxe -cp commandline -D analyzer-optimize --run Main setup -s
 
-          echo "=== VERIFY ==="
-          haxelib list
-          haxelib path extension-androidtools
+    echo "=== VERIFY ==="
+    haxelib list
+    haxelib path extension-androidtools
 
   - name: Rebuild hxcpp
     shell: bash
