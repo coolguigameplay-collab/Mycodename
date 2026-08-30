@@ -22,48 +22,35 @@ steps:
     with:
       ndk-version: r25c
 
-  - name: Installing/Updating libraries
-    shell: bash
-    run: |
-      set -e
-      rm -rf .haxelib
-      mkdir -p .haxelib
-      haxelib setup "$GITHUB_WORKSPACE/.haxelib"
+        - name: Installing/Updating libraries
+        continue-on-error: true
+        run: |
+          haxelib setup .haxelib
+          haxe -cp commandline -D analyzer-optimize --run Main setup -s
 
-      echo "=== HAXE ==="
-      which haxe
-      haxe --version
-      export HAXE_STD_PATH="$(haxe --std-path)"
-      echo "HAXE_STD_PATH=$HAXE_STD_PATH"
+      - name: Diagnose Compiler.hx
+        run: |
+          echo "=== HAXE ==="
+          haxe --version
+          which haxe
 
-      echo "=== SETUP LIBRARIES ==="
-      haxe -cp commandline -D analyzer-optimize --run Main setup -s
+          echo "=== HAXE STD ==="
+          echo "$HAXE_STD_PATH"
 
-      echo "=== HXCPP ==="
-      haxelib path hxcpp
+          echo "=== ALL Compiler.hx ==="
+          find . /opt/hostedtoolcache/haxe -type f -name "Compiler.hx" -print 2>/dev/null || true
 
-      echo "=== ANDROIDTOOLS ==="
-      haxelib path extension-androidtools
+          echo "=== HXCPP ==="
+          haxelib path hxcpp || true
 
-      echo "=== COMPILER.HX ==="
-      find "$HAXE_STD_PATH" .haxelib /opt/hostedtoolcache/haxe -type f -name 'Compiler.hx' -print 2>/dev/null || true
+          echo "=== ANDROIDTOOLS ==="
+          haxelib path extension-androidtools || true
 
-  - name: Inspect Compiler.hx
-    shell: bash
-    run: |
-      echo "=== HAXE MACRO COMPILER ==="
-      COMPILER="$(find "$HAXE_STD_PATH" -type f -path '*/haxe/macro/Compiler.hx' -print -quit 2>/dev/null || true)"
-      if [ -n "$COMPILER" ]; then
-        echo "Compiler: $COMPILER"
-        sed -n '705,730p' "$COMPILER"
-      fi
-
-      echo "=== HXCPP COMPILER ==="
-      HXCOMPILER="$(find .haxelib -type f -name 'Compiler.hx' -print -quit 2>/dev/null || true)"
-      if [ -n "$HXCOMPILER" ]; then
-        echo "Compiler: $HXCOMPILER"
-        sed -n '705,730p' "$HXCOMPILER"
-      fi
+          echo "=== SEARCH LINE 718 ==="
+          for f in $(find . /opt/hostedtoolcache/haxe -type f -name "Compiler.hx" 2>/dev/null); do
+            echo "===== $f ====="
+            sed -n '700,730p' "$f" || true
+          done
 
   - name: Rebuild hxcpp
     shell: bash
