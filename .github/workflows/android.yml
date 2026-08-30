@@ -1,127 +1,94 @@
 name: Android Build
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
-  build:
-    name: Android Build
-    permissions: write-all
-    runs-on: ubuntu-22.04
+build:
+name: Android Build
+permissions: write-all
+runs-on: ubuntu-22.04
 
-    steps:
-      - name: Pulling the new commit
-        uses: actions/checkout@v4
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
 
-      - name: Setting up Haxe
-        uses: krdlab/setup-haxe@v1
-        with:
-          haxe-version: 4.3.7
+  - name: Setting up Haxe
+    uses: krdlab/setup-haxe@v1
+    with:
+      haxe-version: 4.2.5
 
-      - name: Verify Haxe installation
-        shell: bash
-        run: |
-          echo "=== HAXE ==="
-          which haxe
-          haxe --version
+  - name: Setup Android NDK
+    uses: nttld/setup-ndk@main
+    with:
+      ndk-version: r25c
 
-          echo "=== HAXE STD PATH ==="
-          haxe --std-path
+  - name: Installing/Updating libraries
+    shell: bash
+    run: |
+      set -e
+      rm -rf .haxelib
+      mkdir -p .haxelib
+      haxelib setup "$GITHUB_WORKSPACE/.haxelib"
 
-          echo "=== HAXE_STD_PATH ==="
-          echo "$HAXE_STD_PATH"
+      echo "=== HAXE ==="
+      which haxe
+      haxe --version
+      export HAXE_STD_PATH="$(haxe --std-path)"
+      echo "HAXE_STD_PATH=$HAXE_STD_PATH"
 
-          echo "=== Compiler.hx FILES ==="
-          find /opt/hostedtoolcache/haxe -type f -path "*/haxe/macro/Compiler.hx" -print 2>/dev/null || true
+      echo "=== SETUP LIBRARIES ==="
+      haxe -cp commandline -D analyzer-optimize --run Main setup -s
 
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@main
-        with:
-          ndk-version: r25c
+      echo "=== HXCPP ==="
+      haxelib path hxcpp
 
-      - name: Restore Previous Cache
-        id: cache-debug-build-android-restore
-        uses: actions/cache/restore@main
-        with:
-          path: |
-            .haxelib/
-            export/release/android/haxe/
-            export/release/android/obj/
-          key: cache-android-build
+      echo "=== ANDROIDTOOLS ==="
+      haxelib path extension-androidtools
 
-            - name: Installing/Updating libraries
-        run: |
-          haxe -cp commandline -D analyzer-optimize --run Main setup -s
-          echo "=== HAXE ==="
-          which haxe
-          haxe --version
-          echo "=== HXCPP ==="
-          haxelib path hxcpp
-          echo "=== REBUILD HXCPP ==="
-          haxelib run lime rebuild hxcpp
+      echo "=== COMPILER.HX ==="
+      find "$HAXE_STD_PATH" .haxelib /opt/hostedtoolcache/haxe -type f -name 'Compiler.hx' -print 2>/dev/null || true
 
-      - name: Rebuild hxcpp
-        shell: bash
-        run: |
-          export HAXE_STD_PATH="$(haxe --std-path)"
-          haxelib run lime rebuild hxcpp
+  - name: Inspect Compiler.hx
+    shell: bash
+    run: |
+      echo "=== HAXE MACRO COMPILER ==="
+      COMPILER="$(find "$HAXE_STD_PATH" -type f -path '*/haxe/macro/Compiler.hx' -print -quit 2>/dev/null || true)"
+      if [ -n "$COMPILER" ]; then
+        echo "Compiler: $COMPILER"
+        sed -n '705,730p' "$COMPILER"
+      fi
 
-      - name: Configure Android
-        shell: bash
-        run: |
-          haxelib run lime setup -alias -y
-          haxelib run lime config ANDROID_SDK "$ANDROID_HOME"
-          haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_HOME"
-          haxelib run lime config JAVA_HOME "$JAVA_HOME_17_X64"
-          haxelib run lime config ANDROID_SETUP true
+      echo "=== HXCPP COMPILER ==="
+      HXCOMPILER="$(find .haxelib -type f -name 'Compiler.hx' -print -quit 2>/dev/null || true)"
+      if [ -n "$HXCOMPILER" ]; then
+        echo "Compiler: $HXCOMPILER"
+        sed -n '705,730p' "$HXCOMPILER"
+      fi
 
-      - name: Building the game
-        shell: bash
-        run: |
-          export HAXE_STD_PATH="$(haxe --std-path)"
-          haxelib run lime build android -final
+  - name: Rebuild hxcpp
+    shell: bash
+    run: |
+      export HAXE_STD_PATH="$(haxe --std-path)"
+      haxelib run lime rebuild hxcpp
 
-      - name: Clear Previous Cache
-        uses: actions/github-script@v7
-        with:
-          script: |
-            try {
-              const caches = await github.rest.actions.getActionsCacheList({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-              })
+  - name: Configure Android
+    shell: bash
+    run: |
+      haxelib run lime setup -alias -y
+      haxelib run lime config ANDROID_SDK "$ANDROID_HOME"
+      haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_NDK_HOME"
+      haxelib run lime config JAVA_HOME "$JAVA_HOME_17_X64"
+      haxelib run lime config ANDROID_SETUP true
 
-              if (
-                caches.data.actions_caches &&
-                caches.data.actions_caches.length > 0
-              ) {
-                for (const cache of caches.data.actions_caches) {
-                  if (cache.key === "cache-android-build") {
-                    console.log("Clearing " + cache.key + "...")
-                    await github.rest.actions.deleteActionsCacheById({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      cache_id: cache.id,
-                    })
-                  }
-                }
-              }
-            } catch (error) {
-              console.log(error.message)
-            }
+  - name: Building the game
+    shell: bash
+    run: |
+      export HAXE_STD_PATH="$(haxe --std-path)"
+      haxelib run lime build android -final
 
-      - name: Save Current Cache
-        id: cache-release-build-android-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            .haxelib/
-            export/release/android/haxe/
-            export/release/android/obj/
-          key: cache-android-build
-
-      - name: Uploading artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Codename Engine Legacy Android
-          path: export/release/android/bin/app/build/outputs/apk/*
+  - name: Uploading artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: Codename Engine Legacy Android
+      path: export/release/android/bin/app/build/outputs/apk/*
+      if-no-files-found: error
